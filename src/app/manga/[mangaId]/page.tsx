@@ -2,13 +2,39 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getManga } from '@/lib/manga-api';
+import { getMangaDexManga } from '@/lib/mangadex-api';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 
 export default async function MangaDetailPage({ params }: { params: { mangaId: string } }) {
-  const manga = await getManga(params.mangaId);
+    let mangaTitle, author, description, coverImageUrl, coverImageHint, chapters;
 
-  if (!manga) {
+    if (params.mangaId.startsWith('mangadex-')) {
+        const manga = await getMangaDexManga(params.mangaId);
+        if (!manga) {
+            notFound();
+        }
+        mangaTitle = manga.title.en;
+        author = manga.author;
+        description = manga.attributes.description.en;
+        coverImageUrl = manga.coverArt.imageUrl;
+        coverImageHint = manga.coverArt.imageHint;
+        chapters = []; // MangaDex chapters need a separate API call
+    } else {
+        const manga = await getManga(params.mangaId);
+        if (!manga) {
+            notFound();
+        }
+        mangaTitle = manga.title;
+        author = manga.author;
+        description = manga.description;
+        coverImageUrl = manga.coverImage?.imageUrl;
+        coverImageHint = manga.coverImage?.imageHint;
+        chapters = manga.chapters;
+    }
+
+
+  if (!mangaTitle) {
     notFound();
   }
 
@@ -23,28 +49,28 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
         </Button>
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
           <div className="md:col-span-1">
-            {manga.coverImage && (
+            {coverImageUrl && (
               <Image
-                src={manga.coverImage.imageUrl}
-                alt={`Cover for ${manga.title}`}
+                src={coverImageUrl}
+                alt={`Cover for ${mangaTitle}`}
                 width={600}
                 height={800}
                 className="rounded-lg shadow-2xl shadow-black/30 w-full"
-                data-ai-hint={manga.coverImage.imageHint}
+                data-ai-hint={coverImageHint}
               />
             )}
             <Button size="lg" className="w-full mt-6 bg-accent hover:bg-accent/80">Download for Offline</Button>
           </div>
           <div className="md:col-span-2">
-            <h1 className="text-4xl lg:text-5xl font-headline font-bold text-primary">{manga.title}</h1>
-            <p className="text-lg text-muted-foreground mt-1">by {manga.author}</p>
-            <p className="mt-6 text-foreground/80 leading-relaxed">{manga.description}</p>
+            <h1 className="text-4xl lg:text-5xl font-headline font-bold text-primary">{mangaTitle}</h1>
+            <p className="text-lg text-muted-foreground mt-1">by {author}</p>
+            <p className="mt-6 text-foreground/80 leading-relaxed">{description}</p>
             
             <div className="mt-12">
               <h2 className="text-2xl font-headline font-semibold mb-4 border-b border-border pb-2">Chapters</h2>
               <div className="space-y-3">
-                {manga.chapters.map(chapter => (
-                  <Link href={`/manga/${manga.id}/${chapter.id}`} key={chapter.id}>
+                {chapters && chapters.length > 0 ? chapters.map(chapter => (
+                  <Link href={`/manga/${params.mangaId}/${chapter.id}`} key={chapter.id}>
                     <div className="flex justify-between items-center p-4 rounded-lg bg-card hover:bg-secondary transition-colors cursor-pointer">
                       <div>
                         <p className="font-medium text-primary-foreground">Chapter {chapter.chapterNumber}</p>
@@ -53,7 +79,9 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
                       <BookOpen className="h-5 w-5 text-accent" />
                     </div>
                   </Link>
-                ))}
+                )) : (
+                    <p className="text-muted-foreground">Chapters for this series are not yet available.</p>
+                )}
               </div>
             </div>
           </div>
