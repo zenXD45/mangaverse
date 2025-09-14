@@ -31,7 +31,7 @@ export default function LibraryPage() {
 
   useEffect(() => {
     const results = mangas.filter((manga) => {
-        const title = 'title' in manga.title ? manga.title.en : manga.title;
+        const title = typeof manga.title === 'object' ? manga.title.en : manga.title;
         return title.toLowerCase().includes(searchTerm.toLowerCase());
     });
     setFilteredMangas(results);
