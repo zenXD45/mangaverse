@@ -95,10 +95,17 @@ export default {
             height: '0',
           },
         },
+        'text-cycle': {
+          '0%, 100%': { content: '"Explore vast collections."' },
+          '25%': { content: '"Find your next favorite series."' },
+          '50%': { content: '"Read anytime, anywhere."' },
+          '75%': { content: '"An immersive experience."' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'text-cycle': 'text-cycle 10s ease-in-out infinite',
       },
     },
   },

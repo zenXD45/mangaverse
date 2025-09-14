@@ -42,7 +42,7 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <Button asChild variant="ghost" className="mb-8">
-          <Link href="/">
+          <Link href="/library">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Library
           </Link>
