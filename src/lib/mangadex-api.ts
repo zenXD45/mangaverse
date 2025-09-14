@@ -49,6 +49,13 @@ export interface MangaDexChapter {
     }
 }
 
+export interface MangaDexChapterPages {
+    hash: string;
+    data: string[];
+    dataSaver: string[];
+}
+
+
 function transformMangaData(data: any[]): MangaDexManga[] {
   if (!Array.isArray(data)) return [];
 
@@ -199,5 +206,34 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
     } catch (error) {
         console.error(`Failed to fetch chapters for manga ${mangaId} from MangaDex:`, error);
         return [];
+    }
+}
+
+export async function getMangaDexChapterPages(chapterId: string): Promise<MangaDexChapterPages | null> {
+    try {
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (MANGADEX_API_KEY) {
+            headers['Authorization'] = `Bearer ${MANGADEX_API_KEY}`;
+        }
+
+        const response = await fetch(`${MANGADEX_API_URL}/at-home/server/${chapterId}`, {
+            headers,
+            next: { revalidate: 3600 }, // Cache for an hour
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('MangaDex Chapter Pages API Error:', response.status, response.statusText, errorBody);
+            return null;
+        }
+
+        const result = await response.json();
+        return result.chapter;
+
+    } catch(error) {
+        console.error(`Failed to fetch pages for chapter ${chapterId}:`, error);
+        return null;
     }
 }
