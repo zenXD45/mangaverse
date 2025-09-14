@@ -1,3 +1,4 @@
+
 'use server';
 
 const MANGADEX_API_URL = 'https://api.mangadex.org';
@@ -83,14 +84,15 @@ function transformMangaData(data: any[]): MangaDexManga[] {
   });
 }
 
-export async function getMangaDexCollection(title?: string): Promise<MangaDexManga[]> {
+export async function getMangaDexCollection(title?: string, limit = 20, offset = 0): Promise<{mangas: MangaDexManga[], hasMore: boolean}> {
   try {
     const params = new URLSearchParams();
     params.append('includes[]', 'cover_art');
     params.append('includes[]', 'author');
     params.append('contentRating[]', 'safe');
     params.append('contentRating[]', 'suggestive');
-    params.append('limit', '100');
+    params.append('limit', String(limit));
+    params.append('offset', String(offset));
     params.append('order[relevance]', 'desc');
     if (title) params.append('title', title);
 
@@ -109,14 +111,17 @@ export async function getMangaDexCollection(title?: string): Promise<MangaDexMan
     if (!response.ok) {
       const errorBody = await response.text();
       console.error('MangaDex API Error:', response.status, response.statusText, errorBody);
-      return [];
+      return { mangas: [], hasMore: false };
     }
 
     const result = await response.json();
-    return transformMangaData(result.data);
+    const mangas = transformMangaData(result.data);
+    const hasMore = result.total > offset + result.limit;
+
+    return { mangas, hasMore };
   } catch (error) {
     console.error('Failed to fetch from MangaDex:', error);
-    return [];
+    return { mangas: [], hasMore: false };
   }
 }
 
@@ -194,6 +199,7 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         if (result.data) {
           result.data.forEach((chapter: any) => {
               const chapterNum = chapter.attributes.chapter;
+              // Use chapter number and language to uniquely identify a chapter, favoring higher version numbers.
               const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
               const existing = chapterMap.get(chapterKey);
               if (!existing || chapter.attributes.version > existing.attributes.version) {
@@ -202,6 +208,7 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
           });
         }
         
+        // Sort chapters by chapter number numerically.
         return Array.from(chapterMap.values()).sort((a,b) => parseFloat(a.attributes.chapter) - parseFloat(b.attributes.chapter));
 
     } catch (error) {
