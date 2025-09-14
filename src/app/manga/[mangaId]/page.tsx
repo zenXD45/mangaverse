@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -15,6 +16,10 @@ type Chapter = {
 export default async function MangaDetailPage({ params }: { params: { mangaId: string } }) {
     let mangaTitle, author, description, coverImageUrl, coverImageHint;
     let chapters: Chapter[] = [];
+
+    if (!params.mangaId) {
+        notFound();
+    }
 
     if (params.mangaId.startsWith('mangadex-')) {
         const mangaPromise = getMangaDexManga(params.mangaId);
