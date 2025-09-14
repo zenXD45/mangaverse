@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Tone from 'tone';
 import { Music, Play, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 
-// NOTE: Audio files are not provided in this scaffold.
-// To make this component functional, add your audio files to the /public/music directory
-// and ensure the filenames match the 'url' properties below.
 const tracks = [
   { name: 'Peaceful Dreams', url: '/music/peaceful-dreams.mp3' },
   { name: 'Cyber Cityscape', url: '/music/cyber-cityscape.mp3' },
@@ -29,44 +27,46 @@ export function MusicPlayer() {
   const player = useRef<Tone.Player | null>(null);
   const { toast } = useToast();
 
+  // Initialize player and handle track change
   useEffect(() => {
-    // Initialize Tone.Player
+    // Dispose old player if any
+    player.current?.dispose();
+
+    // Create new player instance for current track
     player.current = new Tone.Player(tracks[currentTrackIndex].url, () => {
-      // Autoplay if isPlaying is true
+      // Auto play if already playing!
       if (isPlaying) {
         player.current?.start();
       }
     }).toDestination();
+
     player.current.loop = true;
-    
-    player.current.onstop = () => {
-        // This is called when stopped manually, not on loop end
-    };
-    
-    // Handle loading errors
+
     player.current.onerror = () => {
-        if(isPlaying) {
-            toast({
-                variant: 'destructive',
-                title: 'Audio Error',
-                description: `Could not load: ${tracks[currentTrackIndex].name}. Please add audio files to /public/music.`,
-            });
-            setIsPlaying(false);
-        }
+      if (isPlaying) {
+        toast({
+          variant: 'destructive',
+          title: 'Audio Error',
+          description: `Could not load: ${tracks[currentTrackIndex].name}. Please add audio files to /public/music.`,
+        });
+        setIsPlaying(false);
+      }
     };
 
     return () => {
       player.current?.dispose();
     };
-  }, [currentTrackIndex]);
+  }, [currentTrackIndex, isPlaying, toast]);
 
+  // Sync mute state
   useEffect(() => {
     if (player.current) {
-        player.current.mute = isMuted;
+      player.current.mute = isMuted;
     }
   }, [isMuted]);
 
-  const togglePlay = async () => {
+  // Play/pause toggle handler with proper Tone context startup
+  const togglePlay = useCallback(async () => {
     await Tone.start();
     if (isPlaying) {
       player.current?.stop();
@@ -74,19 +74,23 @@ export function MusicPlayer() {
       player.current?.start();
     }
     setIsPlaying(!isPlaying);
-  };
+  }, [isPlaying]);
 
-  const skipTrack = () => {
-    const nextTrackIndex = (currentTrackIndex + 1) % tracks.length;
-    setCurrentTrackIndex(nextTrackIndex);
-  };
-  
-  const selectTrack = (index: number) => {
-    if (index !== currentTrackIndex) {
+  // Skip to next track
+  const skipTrack = useCallback(() => {
+    setCurrentTrackIndex((prevIndex) => (prevIndex + 1) % tracks.length);
+  }, []);
+
+  // Select track from dropdown
+  const selectTrack = useCallback(
+    (index: number) => {
+      if (index !== currentTrackIndex) {
         setCurrentTrackIndex(index);
-    }
-  };
-
+        setIsPlaying(false); // Optionally pause when switching track
+      }
+    },
+    [currentTrackIndex]
+  );
 
   return (
     <div className="flex items-center gap-1">
@@ -109,7 +113,11 @@ export function MusicPlayer() {
           <DropdownMenuLabel>Ambient Tracks</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {tracks.map((track, index) => (
-            <DropdownMenuItem key={track.name} onClick={() => selectTrack(index)} className={index === currentTrackIndex ? 'bg-accent/50' : ''}>
+            <DropdownMenuItem
+              key={track.name}
+              onClick={() => selectTrack(index)}
+              className={index === currentTrackIndex ? 'bg-accent/50' : ''}
+            >
               {track.name}
             </DropdownMenuItem>
           ))}

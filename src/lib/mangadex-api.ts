@@ -47,6 +47,7 @@ export interface MangaDexChapter {
         translatedLanguage: string;
         pages: number;
         publishAt: string;
+        version: number;
     }
 }
 
@@ -195,11 +196,10 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
 
         const result = await response.json();
         
-        const chapterMap = new Map<string, any>();
+        const chapterMap = new Map<string, MangaDexChapter>();
         if (result.data) {
-          result.data.forEach((chapter: any) => {
+          result.data.forEach((chapter: MangaDexChapter) => {
               const chapterNum = chapter.attributes.chapter;
-              // Use chapter number and language to uniquely identify a chapter, favoring higher version numbers.
               const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
               const existing = chapterMap.get(chapterKey);
               if (!existing || chapter.attributes.version > existing.attributes.version) {
@@ -208,7 +208,6 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
           });
         }
         
-        // Sort chapters by chapter number numerically.
         return Array.from(chapterMap.values()).sort((a,b) => parseFloat(a.attributes.chapter) - parseFloat(b.attributes.chapter));
 
     } catch (error) {

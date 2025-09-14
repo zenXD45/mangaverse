@@ -21,7 +21,7 @@ export default async function MangaReaderPage({ params }: { params: { mangaId: s
         const vol = currentChapterDetails.attributes.volume ? `Vol. ${currentChapterDetails.attributes.volume} ` : '';
         const chap = currentChapterDetails.attributes.chapter ? `Ch. ${currentChapterDetails.attributes.chapter}` : '';
         const title = currentChapterDetails.attributes.title ? `: ${currentChapterDetails.attributes.title}` : '';
-        chapterTitle = `${vol}${chap}${title}`;
+        chapterTitle = `${vol}${chap}${title}`.trim() || 'Chapter';
       } else {
         chapterTitle = 'Unknown Chapter';
       }

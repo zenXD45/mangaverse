@@ -31,9 +31,6 @@ export function MangaCard({ manga }: MangaCardProps) {
     author = manga.author;
   }
 
-  // Debug log to check coverUrl value
-  console.log('Manga', title, 'coverUrl:', coverUrl);
-
   return (
     <Link href={`/manga/${mangaId}`} className="group">
       <Card className="h-full overflow-hidden transition-all duration-300 ease-in-out hover:border-primary hover:shadow-lg hover:shadow-accent/20">
@@ -47,10 +44,9 @@ export function MangaCard({ manga }: MangaCardProps) {
                 height={800}
                 className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                 data-ai-hint={coverHint}
-                unoptimized={true}  // Optional: if using external images without next.config domains
               />
             ) : (
-              <div className="w-full h-full bg-gray-300 flex items-center justify-center text-gray-700">
+              <div className="w-full h-full bg-card flex items-center justify-center text-card-foreground">
                 No cover available
               </div>
             )}
