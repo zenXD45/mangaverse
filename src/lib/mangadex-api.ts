@@ -65,29 +65,25 @@ function transformMangaData(data: any[]): MangaDexManga[] {
 
 export async function getMangaDexCollection(title?: string): Promise<MangaDexManga[]> {
   try {
+    // Correct query params - repeat keys for arrays
     const params = new URLSearchParams();
-
     params.append('includes[]', 'cover_art');
     params.append('includes[]', 'author');
     params.append('contentRating[]', 'safe');
     params.append('contentRating[]', 'suggestive');
     params.append('limit', '100');
-    params.append('order[updatedAt]', 'desc'); // ordering by latest update
-
-    if (title) {
-      params.append('title', title);
-    }
+    params.append('order[updatedAt]', 'desc');
+    if (title) params.append('title', title);
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-
     if (MANGADEX_API_KEY) {
       headers['Authorization'] = `Bearer ${MANGADEX_API_KEY}`;
     }
 
     const response = await fetch(`${MANGADEX_API_URL}/manga?${params.toString()}`, {
-      headers: headers,
+      headers,
       next: { revalidate: 3600 },
     });
 
