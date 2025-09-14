@@ -85,14 +85,13 @@ function transformMangaData(data: any[]): MangaDexManga[] {
 
 export async function getMangaDexCollection(title?: string): Promise<MangaDexManga[]> {
   try {
-    // Correct query params - repeat keys for arrays
     const params = new URLSearchParams();
     params.append('includes[]', 'cover_art');
     params.append('includes[]', 'author');
     params.append('contentRating[]', 'safe');
     params.append('contentRating[]', 'suggestive');
     params.append('limit', '100');
-    params.append('order[updatedAt]', 'desc');
+    params.append('order[relevance]', 'desc');
     if (title) params.append('title', title);
 
     const headers: HeadersInit = {
@@ -164,7 +163,7 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         params.append('translatedLanguage[]', 'en');
         params.append('order[chapter]', 'asc');
         params.append('limit', '500');
-        params.append('includes[]', 'scanlation_group'); // To get group name
+        params.append('includes[]', 'scanlation_group');
         params.append('contentRating[]', 'safe');
         params.append('contentRating[]', 'suggestive');
         params.append('contentRating[]', 'erotica');
@@ -190,19 +189,21 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         }
 
         const result = await response.json();
-        // Filter out duplicates and keep the one with the highest version
+        
         const chapterMap = new Map<string, any>();
-        result.data.forEach((chapter: any) => {
-            const chapterNum = chapter.attributes.chapter;
-            // Use a composite key to handle different translations of the same chapter
-            const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
-            const existing = chapterMap.get(chapterKey);
-            if (!existing || chapter.attributes.version > existing.attributes.version) {
-                chapterMap.set(chapterKey, chapter);
-            }
-        });
-
+        if (result.data) {
+          result.data.forEach((chapter: any) => {
+              const chapterNum = chapter.attributes.chapter;
+              const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
+              const existing = chapterMap.get(chapterKey);
+              if (!existing || chapter.attributes.version > existing.attributes.version) {
+                  chapterMap.set(chapterKey, chapter);
+              }
+          });
+        }
+        
         return Array.from(chapterMap.values()).sort((a,b) => parseFloat(a.attributes.chapter) - parseFloat(b.attributes.chapter));
+
     } catch (error) {
         console.error(`Failed to fetch chapters for manga ${mangaId} from MangaDex:`, error);
         return [];
@@ -220,7 +221,7 @@ export async function getMangaDexChapterPages(chapterId: string): Promise<MangaD
 
         const response = await fetch(`${MANGADEX_API_URL}/at-home/server/${chapterId}`, {
             headers,
-            next: { revalidate: 3600 }, // Cache for an hour
+            next: { revalidate: 3600 },
         });
 
         if (!response.ok) {
