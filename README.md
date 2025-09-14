@@ -1,5 +1,5 @@
-# Firebase Studio
+# MangaVerse
 
-This is a NextJS starter in Firebase Studio.
+An immersive manga reader app designed for a captivating reading experience.
 
-To get started, take a look at src/app/page.tsx.
+This is a Next.js app generated with Firebase Studio.

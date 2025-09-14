@@ -1,0 +1,41 @@
+
+{
+  "mangas": [
+    {
+      "id": "dimensional-drifters",
+      "title": "Dimensional Drifters",
+      "author": "Yuki Tanaka",
+      "description": "A group of high school students with extraordinary powers find themselves pulled into a cosmic war across different dimensions. They must learn to control their abilities and work together to save reality from collapsing.",
+      "coverImageId": "manga-cover-1",
+      "chapters": [
+        {
+          "id": "chapter-1",
+          "title": "The Anomaly",
+          "chapterNumber": 1,
+          "panelIds": ["dd-c1-p1", "dd-c1-p2", "dd-c1-p3", "dd-c1-p4"]
+        },
+        {
+          "id": "chapter-2",
+          "title": "First Contact",
+          "chapterNumber": 2,
+          "panelIds": ["dd-c2-p1", "dd-c2-p2", "dd-c2-p3"]
+        }
+      ]
+    },
+    {
+      "id": "crimson-echo",
+      "title": "Crimson Echo",
+      "author": "Akira Ito",
+      "description": "In a city fueled by steam and secrets, a detective with a clockwork heart hunts a phantom killer. Each clue unravels a conspiracy that threatens to shatter the fragile peace of the neo-Victorian metropolis.",
+      "coverImageId": "manga-cover-2",
+      "chapters": [
+        {
+          "id": "chapter-1",
+          "title": "The Ghost of Gears",
+          "chapterNumber": 1,
+          "panelIds": ["ce-c1-p1", "ce-c1-p2", "ce-c1-p3", "ce-c1-p4", "ce-c1-p5"]
+        }
+      ]
+    }
+  ]
+}

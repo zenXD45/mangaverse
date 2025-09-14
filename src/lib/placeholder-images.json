@@ -1,3 +1,89 @@
+
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "manga-cover-1",
+      "description": "Cover for Dimensional Drifters manga",
+      "imageUrl": "https://picsum.photos/seed/mcover1/600/800",
+      "imageHint": "manga cover"
+    },
+    {
+      "id": "manga-cover-2",
+      "description": "Cover for Crimson Echo manga",
+      "imageUrl": "https://picsum.photos/seed/mcover2/600/800",
+      "imageHint": "manga cover"
+    },
+    {
+      "id": "dd-c1-p1",
+      "description": "Dimensional Drifters Chapter 1 Panel 1",
+      "imageUrl": "https://picsum.photos/seed/ddc1p1/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c1-p2",
+      "description": "Dimensional Drifters Chapter 1 Panel 2",
+      "imageUrl": "https://picsum.photos/seed/ddc1p2/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c1-p3",
+      "description": "Dimensional Drifters Chapter 1 Panel 3",
+      "imageUrl": "https://picsum.photos/seed/ddc1p3/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c1-p4",
+      "description": "Dimensional Drifters Chapter 1 Panel 4",
+      "imageUrl": "https://picsum.photos/seed/ddc1p4/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c2-p1",
+      "description": "Dimensional Drifters Chapter 2 Panel 1",
+      "imageUrl": "https://picsum.photos/seed/ddc2p1/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c2-p2",
+      "description": "Dimensional Drifters Chapter 2 Panel 2",
+      "imageUrl": "https://picsum.photos/seed/ddc2p2/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "dd-c2-p3",
+      "description": "Dimensional Drifters Chapter 2 Panel 3",
+      "imageUrl": "https://picsum.photos/seed/ddc2p3/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "ce-c1-p1",
+      "description": "Crimson Echo Chapter 1 Panel 1",
+      "imageUrl": "https://picsum.photos/seed/cec1p1/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "ce-c1-p2",
+      "description": "Crimson Echo Chapter 1 Panel 2",
+      "imageUrl": "https://picsum.photos/seed/cec1p2/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "ce-c1-p3",
+      "description": "Crimson Echo Chapter 1 Panel 3",
+      "imageUrl": "https://picsum.photos/seed/cec1p3/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "ce-c1-p4",
+      "description": "Crimson Echo Chapter 1 Panel 4",
+      "imageUrl": "https://picsum.photos/seed/cec1p4/800/1200",
+      "imageHint": "manga panel"
+    },
+    {
+      "id": "ce-c1-p5",
+      "description": "Crimson Echo Chapter 1 Panel 5",
+      "imageUrl": "https://picsum.photos/seed/cec1p5/800/1200",
+      "imageHint": "manga panel"
+    }
+  ]
 }
