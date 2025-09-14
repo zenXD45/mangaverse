@@ -1,5 +1,3 @@
-
-
 'use server';
 
 const MANGADEX_API_URL = 'https://api.mangadex.org';
@@ -159,6 +157,12 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         params.append('translatedLanguage[]', 'en');
         params.append('order[chapter]', 'asc');
         params.append('limit', '500');
+        params.append('includes[]', 'scanlation_group'); // To get group name
+        params.append('contentRating[]', 'safe');
+        params.append('contentRating[]', 'suggestive');
+        params.append('contentRating[]', 'erotica');
+        params.append('contentRating[]', 'pornographic');
+
 
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
@@ -183,13 +187,15 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         const chapterMap = new Map<string, any>();
         result.data.forEach((chapter: any) => {
             const chapterNum = chapter.attributes.chapter;
-            const existing = chapterMap.get(chapterNum);
+            // Use a composite key to handle different translations of the same chapter
+            const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
+            const existing = chapterMap.get(chapterKey);
             if (!existing || chapter.attributes.version > existing.attributes.version) {
-                chapterMap.set(chapterNum, chapter);
+                chapterMap.set(chapterKey, chapter);
             }
         });
 
-        return Array.from(chapterMap.values());
+        return Array.from(chapterMap.values()).sort((a,b) => parseFloat(a.attributes.chapter) - parseFloat(b.attributes.chapter));
     } catch (error) {
         console.error(`Failed to fetch chapters for manga ${mangaId} from MangaDex:`, error);
         return [];
