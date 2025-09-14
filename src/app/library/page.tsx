@@ -35,15 +35,13 @@ export default function LibraryPage() {
       setSearchTerm(term);
       if (term.length > 2) {
           startSearch(async () => {
-              const [localMangas, mangaDexMangas] = await Promise.all([
-                  getMangas(),
-                  getMangaDexCollection(term),
-              ]);
-              const combinedMangas = [...localMangas, ...mangaDexMangas];
-              setMangas(combinedMangas);
+              // When searching, only show results from MangaDex
+              const mangaDexMangas = await getMangaDexCollection(term);
+              setMangas(mangaDexMangas);
           });
       } else if (term.length === 0) {
           startSearch(async () => {
+              // When search is cleared, show the initial combined list again
               const [localMangas, mangaDexMangas] = await Promise.all([
                   getMangas(),
                   getMangaDexCollection(),
