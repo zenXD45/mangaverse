@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 's2.mangadex.org',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
