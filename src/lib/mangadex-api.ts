@@ -75,7 +75,7 @@ export interface MangaDexManga {
             'includes[]': ['cover_art', 'author'],
             'contentRating[]': ['safe', 'suggestive'],
             'order[rating]': 'desc',
-            'limit': '20'
+            'limit': '100'
         });
 
         if (title) {
