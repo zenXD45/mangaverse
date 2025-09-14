@@ -4,14 +4,14 @@
     {
       "id": "manga-cover-1",
       "description": "Cover for Dimensional Drifters manga",
-      "imageUrl": "https://picsum.photos/seed/mcover1/600/800",
-      "imageHint": "manga cover"
+      "imageUrl": "https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=600&h=800&auto=format&fit=crop",
+      "imageHint": "abstract space"
     },
     {
       "id": "manga-cover-2",
       "description": "Cover for Crimson Echo manga",
-      "imageUrl": "https://picsum.photos/seed/mcover2/600/800",
-      "imageHint": "manga cover"
+      "imageUrl": "https://images.unsplash.com/photo-1534437433778-4a67b5b5c9e8?q=80&w=600&h=800&auto=format&fit=crop",
+      "imageHint": "steampunk city"
     },
     {
       "id": "dd-c1-p1",
