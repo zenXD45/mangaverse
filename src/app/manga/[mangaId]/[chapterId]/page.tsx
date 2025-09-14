@@ -26,7 +26,7 @@ export default async function MangaReaderPage({ params }: { params: { mangaId: s
       
       if (chapterPagesData) {
         const { hash, data: pageFiles } = chapterPagesData;
-        const baseUrl = 'https://uploads.mangadex.org';
+        const baseUrl = 'https://s2.mangadex.org'; // Corrected URL
         panels = pageFiles.map((filename, index) => ({
             id: `${params.chapterId}-panel-${index}`,
             imageUrl: `${baseUrl}/data/${hash}/${filename}`,
