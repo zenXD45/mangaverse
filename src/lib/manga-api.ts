@@ -21,11 +21,7 @@ export interface Manga {
 
 const imageMap = new Map(PlaceHolderImages.map(img => [img.id, img]));
 
-// Simulate API latency
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
 export async function getMangas(): Promise<Manga[]> {
-  await delay(100);
   const mangas = data.mangas.map(manga => ({
     ...manga,
     coverImage: imageMap.get(manga.coverImageId)
@@ -34,7 +30,6 @@ export async function getMangas(): Promise<Manga[]> {
 }
 
 export async function getManga(id: string): Promise<Manga | null> {
-  await delay(100);
   const mangaData = data.mangas.find(m => m.id === id);
   if (!mangaData) {
     return null;
@@ -46,7 +41,6 @@ export async function getManga(id: string): Promise<Manga | null> {
 }
 
 export async function getChapter(mangaId: string, chapterId: string): Promise<Chapter | null> {
-  await delay(100);
   const mangaData = data.mangas.find(m => m.id === mangaId);
   if (!mangaData) {
     return null;
