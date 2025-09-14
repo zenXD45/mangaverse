@@ -1,4 +1,5 @@
 
+
 'use server';
 
 const MANGADEX_API_URL = 'https://api.mangadex.org';
@@ -41,18 +42,19 @@ function transformMangaData(data: any[]): MangaDexManga[] {
   if (!Array.isArray(data)) return [];
 
   return data.map(manga => {
+    const originalMangaId = manga.id;
     const authorRel = manga.relationships.find((rel: any) => rel.type === 'author');
     const coverArtRel = manga.relationships.find((rel: any) => rel.type === 'cover_art');
 
     const author = authorRel ? authorRel.attributes.name : 'Unknown Author';
     const coverFileName = coverArtRel ? coverArtRel.attributes.fileName : null;
     const coverUrl = coverFileName
-      ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
+      ? `https://uploads.mangadex.org/covers/${originalMangaId}/${coverFileName}`
       : 'https://picsum.photos/seed/mangadex-fallback/600/800';
 
     return {
       ...manga,
-      id: `mangadex-${manga.id}`,
+      id: `mangadex-${originalMangaId}`,
       title: manga.attributes.title,
       author,
       coverArt: {
