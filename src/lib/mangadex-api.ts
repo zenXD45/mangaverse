@@ -38,6 +38,19 @@ export interface MangaDexManga {
   };
 }
 
+export interface MangaDexChapter {
+    id: string;
+    type: string;
+    attributes: {
+        volume?: string | null;
+        chapter: string;
+        title?: string | null;
+        translatedLanguage: string;
+        pages: number;
+        publishAt: string;
+    }
+}
+
 function transformMangaData(data: any[]): MangaDexManga[] {
   if (!Array.isArray(data)) return [];
 
@@ -137,4 +150,48 @@ export async function getMangaDexManga(id: string): Promise<MangaDexManga | null
     console.error(`Failed to fetch manga ${id} from MangaDex:`, error);
     return null;
   }
+}
+
+export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChapter[]> {
+    try {
+        const originalMangaId = mangaId.replace('mangadex-', '');
+        const params = new URLSearchParams();
+        params.append('translatedLanguage[]', 'en');
+        params.append('order[chapter]', 'asc');
+        params.append('limit', '500');
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+        if (MANGADEX_API_KEY) {
+            headers['Authorization'] = `Bearer ${MANGADEX_API_KEY}`;
+        }
+
+        const response = await fetch(`${MANGADEX_API_URL}/manga/${originalMangaId}/feed?${params.toString()}`, {
+            headers,
+            next: { revalidate: 3600 },
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error('MangaDex Chapters API Error:', response.status, response.statusText, errorBody);
+            return [];
+        }
+
+        const result = await response.json();
+        // Filter out duplicates and keep the one with the highest version
+        const chapterMap = new Map<string, any>();
+        result.data.forEach((chapter: any) => {
+            const chapterNum = chapter.attributes.chapter;
+            const existing = chapterMap.get(chapterNum);
+            if (!existing || chapter.attributes.version > existing.attributes.version) {
+                chapterMap.set(chapterNum, chapter);
+            }
+        });
+
+        return Array.from(chapterMap.values());
+    } catch (error) {
+        console.error(`Failed to fetch chapters for manga ${mangaId} from MangaDex:`, error);
+        return [];
+    }
 }

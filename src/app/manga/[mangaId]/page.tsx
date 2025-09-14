@@ -2,15 +2,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getManga } from '@/lib/manga-api';
-import { getMangaDexManga } from '@/lib/mangadex-api';
+import { getMangaDexManga, getMangaDexChapters, type MangaDexChapter } from '@/lib/mangadex-api';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 
+type Chapter = {
+    id: string;
+    chapterNumber: string;
+    title: string | null;
+}
+
 export default async function MangaDetailPage({ params }: { params: { mangaId: string } }) {
-    let mangaTitle, author, description, coverImageUrl, coverImageHint, chapters;
+    let mangaTitle, author, description, coverImageUrl, coverImageHint;
+    let chapters: Chapter[] = [];
 
     if (params.mangaId.startsWith('mangadex-')) {
-        const manga = await getMangaDexManga(params.mangaId);
+        const mangaPromise = getMangaDexManga(params.mangaId);
+        const chaptersPromise = getMangaDexChapters(params.mangaId);
+
+        const [manga, mangaDexChapters] = await Promise.all([mangaPromise, chaptersPromise]);
+
         if (!manga) {
             notFound();
         }
@@ -19,7 +30,11 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
         description = manga.attributes.description.en;
         coverImageUrl = manga.coverArt.imageUrl;
         coverImageHint = manga.coverArt.imageHint;
-        chapters = []; // MangaDex chapters need a separate API call
+        chapters = mangaDexChapters.map(ch => ({
+            id: ch.id,
+            chapterNumber: ch.attributes.chapter,
+            title: ch.attributes.title || `Chapter ${ch.attributes.chapter}`
+        }));
     } else {
         const manga = await getManga(params.mangaId);
         if (!manga) {
@@ -30,7 +45,11 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
         description = manga.description;
         coverImageUrl = manga.coverImage?.imageUrl;
         coverImageHint = manga.coverImage?.imageHint;
-        chapters = manga.chapters;
+        chapters = manga.chapters.map(ch => ({
+            id: ch.id,
+            chapterNumber: String(ch.chapterNumber),
+            title: ch.title
+        }));
     }
 
 
@@ -68,13 +87,13 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
             
             <div className="mt-12">
               <h2 className="text-2xl font-headline font-semibold mb-4 border-b border-border pb-2">Chapters</h2>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-4">
                 {chapters && chapters.length > 0 ? chapters.map(chapter => (
                   <Link href={`/manga/${params.mangaId}/${chapter.id}`} key={chapter.id}>
                     <div className="flex justify-between items-center p-4 rounded-lg bg-card hover:bg-secondary transition-colors cursor-pointer">
                       <div>
                         <p className="font-medium text-primary-foreground">Chapter {chapter.chapterNumber}</p>
-                        <p className="text-sm text-muted-foreground">{chapter.title}</p>
+                        {chapter.title && <p className="text-sm text-muted-foreground">{chapter.title}</p>}
                       </div>
                       <BookOpen className="h-5 w-5 text-accent" />
                     </div>
