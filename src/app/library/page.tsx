@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { getMangaDexCollection, type MangaDexManga } from '@/lib/mangadex-api';
 import { getMangas, type Manga } from '@/lib/manga-api';
 import { MangaCard } from '@/components/manga/manga-card';
@@ -10,12 +10,14 @@ import { Search } from 'lucide-react';
 
 export default function LibraryPage() {
   const [mangas, setMangas] = useState<(Manga | MangaDexManga)[]>([]);
-  const [filteredMangas, setFilteredMangas] = useState<(Manga | MangaDexManga)[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSearching, startSearch] = useTransition();
+
+  const allMangas = mangas;
 
   useEffect(() => {
-    async function loadMangas() {
+    async function loadInitialMangas() {
       setLoading(true);
       const [localMangas, mangaDexMangas] = await Promise.all([
         getMangas(),
@@ -23,19 +25,35 @@ export default function LibraryPage() {
       ]);
       const combinedMangas = [...localMangas, ...mangaDexMangas];
       setMangas(combinedMangas);
-      setFilteredMangas(combinedMangas);
       setLoading(false);
     }
-    loadMangas();
+    loadInitialMangas();
   }, []);
 
-  useEffect(() => {
-    const results = mangas.filter((manga) => {
-        const title = typeof manga.title === 'object' ? manga.title.en : manga.title;
-        return title.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-    setFilteredMangas(results);
-  }, [searchTerm, mangas]);
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const term = e.target.value;
+      setSearchTerm(term);
+      if (term.length > 2) {
+          startSearch(async () => {
+              const [localMangas, mangaDexMangas] = await Promise.all([
+                  getMangas(),
+                  getMangaDexCollection(term),
+              ]);
+              const combinedMangas = [...localMangas, ...mangaDexMangas];
+              setMangas(combinedMangas);
+          });
+      } else if (term.length === 0) {
+          startSearch(async () => {
+              const [localMangas, mangaDexMangas] = await Promise.all([
+                  getMangas(),
+                  getMangaDexCollection(),
+              ]);
+              const combinedMangas = [...localMangas, ...mangaDexMangas];
+              setMangas(combinedMangas);
+          });
+      }
+  };
+
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -52,25 +70,25 @@ export default function LibraryPage() {
             placeholder="Search for a manga..."
             className="pl-10 h-12 text-lg"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearch}
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         </div>
       </header>
-      {loading ? (
+      {loading || isSearching ? (
          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="space-y-2">
-                    <div className="aspect-[3/4] bg-card rounded-lg"></div>
-                    <div className="h-6 bg-card rounded w-3/4"></div>
-                    <div className="h-4 bg-card rounded w-1/2"></div>
+                    <div className="aspect-[3/4] bg-card rounded-lg animate-pulse"></div>
+                    <div className="h-6 bg-card rounded w-3/4 animate-pulse"></div>
+                    <div className="h-4 bg-card rounded w-1/2 animate-pulse"></div>
                 </div>
             ))}
          </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {filteredMangas.length > 0 ? (
-            filteredMangas.map((manga) => (
+          {allMangas.length > 0 ? (
+            allMangas.map((manga) => (
               <MangaCard key={manga.id} manga={manga} />
             ))
           ) : (
