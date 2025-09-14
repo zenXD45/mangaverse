@@ -46,6 +46,9 @@ export interface MangaDexManga {
   
   // This function transforms the raw API response into a more usable format
   function transformMangaData(data: any[]): MangaDexManga[] {
+    if (!Array.isArray(data)) {
+      return [];
+    }
     return data.map(manga => {
         const authorRel = manga.relationships.find((rel: any) => rel.type === 'author');
         const coverArtRel = manga.relationships.find((rel: any) => rel.type === 'cover_art');
@@ -82,13 +85,22 @@ export interface MangaDexManga {
             params.set('title', title);
         }
 
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (MANGADEX_API_KEY) {
+            headers['Authorization'] = `Bearer ${MANGADEX_API_KEY}`;
+        }
+
+
         const response = await fetch(`${MANGADEX_API_URL}/manga?${params.toString()}`, {
-            headers: MANGADEX_API_KEY ? { 'Authorization': `Bearer ${MANGADEX_API_KEY}` } : {},
+            headers: headers,
             next: { revalidate: 3600 } // Revalidate data every hour
         });
 
         if (!response.ok) {
-            console.error('MangaDex API Error:', response.status, await response.text());
+            const errorBody = await response.text();
+            console.error('MangaDex API Error:', response.status, response.statusText, errorBody);
             return [];
         }
 
@@ -108,13 +120,21 @@ export interface MangaDexManga {
             'includes[]': ['cover_art', 'author'],
         });
 
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (MANGADEX_API_KEY) {
+            headers['Authorization'] = `Bearer ${MANGADEX_API_KEY}`;
+        }
+
         const response = await fetch(`${MANGADEX_API_URL}/manga/${mangaId}?${params.toString()}`, {
-            headers: MANGADEX_API_KEY ? { 'Authorization': `Bearer ${MANGADEX_API_KEY}` } : {},
-             next: { revalidate: 3600 }
+            headers: headers,
+            next: { revalidate: 3600 }
         });
 
         if (!response.ok) {
-            console.error('MangaDex API Error:', response.status, await response.text());
+            const errorBody = await response.text();
+            console.error('MangaDex API Error:', response.status, response.statusText, errorBody);
             return null;
         }
 
