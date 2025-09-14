@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Carousel,
@@ -17,6 +17,7 @@ import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
+
 
 type MangaReaderProps = {
   panels: ImagePlaceholder[];
@@ -44,7 +45,7 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
   };
 
   useEffect(() => {
-    showControls(); // Show on initial load
+    showControls();
     return () => {
       if (controlsTimeout.current) {
         clearTimeout(controlsTimeout.current);
@@ -78,8 +79,9 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
 
   return (
     <div
-      className="relative w-full h-screen bg-black flex items-center justify-center overflow-hidden"
+      className="relative w-full h-screen bg-black"
       onClick={showControls}
+      onMouseMove={showControls}
     >
       <header
         className={cn(
@@ -94,31 +96,35 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
             </Link>
           </Button>
           <div className="text-center">
-            <h1 className="font-headline text-lg text-primary-foreground">{chapterTitle}</h1>
+            <h1 className="font-headline text-lg text-primary-foreground">
+              {chapterTitle}
+            </h1>
             <p className="text-sm text-muted-foreground">{`Page ${current} of ${count}`}</p>
           </div>
           <MusicPlayer />
         </div>
       </header>
-
-      <Carousel setApi={setApi} className="w-full max-w-2xl">
-        <CarouselContent>
-          {panels.map((panel, index) => (
-            <CarouselItem key={panel.id}>
-                <MangaPanel 
-                    src={panel.imageUrl} 
-                    index={index} 
-                    api={api}
-                    priority={index < 2}
-                />
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <div className={cn('transition-opacity duration-300', controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none')}>
+      
+      <main className="flex-grow flex items-center justify-center h-full">
+        <Carousel setApi={setApi} className="w-full h-full">
+            <CarouselContent className="h-full">
+            {panels.map((panel, index) => (
+                <CarouselItem key={panel.id} className="h-full">
+                    <MangaPanel src={panel.imageUrl} index={index} api={api} priority={index < 2} />
+                </CarouselItem>
+            ))}
+            </CarouselContent>
+            <div
+            className={cn(
+                'transition-opacity duration-300',
+                controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            )}
+            >
             <CarouselPrevious className="left-2 bg-background/50 hover:bg-background/80 border-border" />
             <CarouselNext className="right-2 bg-background/50 hover:bg-background/80 border-border" />
-        </div>
-      </Carousel>
+            </div>
+        </Carousel>
+      </main>
 
       <footer
         className={cn(
@@ -127,14 +133,14 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
         )}
       >
         <div className="container mx-auto flex items-center gap-4">
-            <SlidersHorizontal className="text-primary-foreground"/>
-            <Slider
-                value={[current-1]}
-                max={count - 1}
-                step={1}
-                onValueChange={handleSlideChange}
-                className="w-full"
-            />
+          <SlidersHorizontal className="text-primary-foreground" />
+          <Slider
+            value={[current > 0 ? current - 1 : 0]}
+            max={count > 0 ? count - 1 : 0}
+            step={1}
+            onValueChange={handleSlideChange}
+            className="w-full"
+          />
         </div>
       </footer>
     </div>

@@ -20,40 +20,38 @@ export interface Manga {
 }
 
 const imageMap = new Map(PlaceHolderImages.map(img => [img.id, img]));
+const DEFAULT_COVER_IMAGE = PlaceHolderImages.length > 0 ? PlaceHolderImages[0] : undefined;
 
 export async function getMangas(): Promise<Manga[]> {
-  const mangas = data.mangas.map(manga => ({
+  return data.mangas.map(manga => ({
     ...manga,
-    coverImage: imageMap.get(manga.coverImageId)
-  }));
-  return mangas as Manga[];
+    coverImage: imageMap.get(manga.coverImageId) ?? DEFAULT_COVER_IMAGE,
+  })) as Manga[];
 }
 
 export async function getManga(id: string): Promise<Manga | null> {
   const mangaData = data.mangas.find(m => m.id === id);
-  if (!mangaData) {
-    return null;
-  }
+  if (!mangaData) return null;
+
   return {
     ...mangaData,
-    coverImage: imageMap.get(mangaData.coverImageId)
+    coverImage: imageMap.get(mangaData.coverImageId) ?? DEFAULT_COVER_IMAGE,
   } as Manga;
 }
 
 export async function getChapter(mangaId: string, chapterId: string): Promise<Chapter | null> {
   const mangaData = data.mangas.find(m => m.id === mangaId);
-  if (!mangaData) {
-    return null;
-  }
-  const chapterData = mangaData.chapters.find(c => c.id === chapterId);
-  if (!chapterData) {
-    return null;
-  }
+  if (!mangaData) return null;
 
-  const panels = chapterData.panelIds.map(id => imageMap.get(id)).filter(Boolean) as ImagePlaceholder[];
-  
+  const chapterData = mangaData.chapters.find(c => c.id === chapterId);
+  if (!chapterData) return null;
+
+  const panels = chapterData.panelIds
+    .map(id => imageMap.get(id))
+    .filter((img): img is ImagePlaceholder => !!img); // type guard to filter out falsy
+
   return {
     ...chapterData,
-    panels
+    panels,
   };
 }
