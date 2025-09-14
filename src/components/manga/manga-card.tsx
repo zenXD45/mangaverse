@@ -41,9 +41,9 @@ export function MangaCard({ manga }: MangaCardProps) {
               <Image
                 src={coverUrl}
                 alt={`Cover for ${title}`}
-                fill
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
-                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                width={600}
+                height={800}
+                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
                 data-ai-hint={coverHint}
               />
             )}
