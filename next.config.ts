@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
         hostname: 'uploads.mangadex.org',
         port: '',
         pathname: '/**',
-      }
+      },
     ],
   },
 };
