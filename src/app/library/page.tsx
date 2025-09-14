@@ -14,8 +14,6 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [isSearching, startSearch] = useTransition();
 
-  const allMangas = mangas;
-
   useEffect(() => {
     async function loadInitialMangas() {
       setLoading(true);
@@ -33,23 +31,23 @@ export default function LibraryPage() {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
       const term = e.target.value;
       setSearchTerm(term);
-      if (term.length > 2) {
-          startSearch(async () => {
-              // When searching, only show results from MangaDex
-              const mangaDexMangas = await getMangaDexCollection(term);
-              setMangas(mangaDexMangas);
-          });
-      } else if (term.length === 0) {
-          startSearch(async () => {
-              // When search is cleared, show the initial combined list again
-              const [localMangas, mangaDexMangas] = await Promise.all([
-                  getMangas(),
-                  getMangaDexCollection(),
-              ]);
-              const combinedMangas = [...localMangas, ...mangaDexMangas];
-              setMangas(combinedMangas);
-          });
-      }
+      startSearch(async () => {
+        if (term.length > 2) {
+            // When searching, only show results from MangaDex
+            const mangaDexMangas = await getMangaDexCollection(term);
+            setMangas(mangaDexMangas);
+        } else if (term.length === 0) {
+            // When search is cleared, show the initial combined list again
+            setLoading(true);
+            const [localMangas, mangaDexMangas] = await Promise.all([
+                getMangas(),
+                getMangaDexCollection(),
+            ]);
+            const combinedMangas = [...localMangas, ...mangaDexMangas];
+            setMangas(combinedMangas);
+            setLoading(false);
+        }
+      });
   };
 
 
@@ -85,8 +83,8 @@ export default function LibraryPage() {
          </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          {allMangas.length > 0 ? (
-            allMangas.map((manga) => (
+          {mangas.length > 0 ? (
+            mangas.map((manga) => (
               <MangaCard key={manga.id} manga={manga} />
             ))
           ) : (
