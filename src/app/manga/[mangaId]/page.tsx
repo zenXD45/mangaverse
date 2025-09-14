@@ -23,7 +23,7 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
 
     if (params.mangaId.startsWith('mangadex-')) {
         const mangaPromise = getMangaDexManga(params.mangaId);
-        const chaptersPromise = getMangaDexChapters(params.mangaId);
+        const chaptersPromise = getMangaDexChapters(params.mangaId.replace('mangadex-', ''));
 
         const [manga, mangaDexChapters] = await Promise.all([mangaPromise, chaptersPromise]);
 
@@ -38,7 +38,7 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
         chapters = mangaDexChapters.map(ch => ({
             id: ch.id,
             chapterNumber: ch.attributes.chapter,
-            title: ch.attributes.title || `Chapter ${ch.attributes.chapter}`
+            title: ch.attributes.title
         }));
     } else {
         const manga = await getManga(params.mangaId);
