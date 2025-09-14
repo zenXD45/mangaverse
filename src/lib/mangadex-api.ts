@@ -1,4 +1,5 @@
 
+
 'use server';
 
 const MANGADEX_API_URL = 'https://api.mangadex.org';
@@ -127,6 +128,7 @@ export async function getMangaDexCollection(title?: string, limit = 20, offset =
 }
 
 export async function getMangaDexManga(id: string): Promise<MangaDexManga | null> {
+  if (!id || !id.startsWith('mangadex-')) return null;
   try {
     const mangaId = id.replace('mangadex-', '');
     const params = new URLSearchParams();
@@ -200,7 +202,8 @@ export async function getMangaDexChapters(mangaId: string): Promise<MangaDexChap
         if (result.data) {
           result.data.forEach((chapter: MangaDexChapter) => {
               const chapterNum = chapter.attributes.chapter;
-              const chapterKey = `${chapterNum}-${chapter.attributes.translatedLanguage}`;
+              // Use chapter ID as a fallback key if chapter number is missing
+              const chapterKey = chapterNum ? `${chapterNum}-${chapter.attributes.translatedLanguage}` : chapter.id;
               const existing = chapterMap.get(chapterKey);
               if (!existing || chapter.attributes.version > existing.attributes.version) {
                   chapterMap.set(chapterKey, chapter);
