@@ -1,125 +1,145 @@
-
 'use client';
 
-import { useState, useEffect, useTransition, useCallback } from 'react';
-import { getMangaDexCollection, type MangaDexManga } from '@/lib/mangadex-api';
-import { getMangas, type Manga } from '@/lib/manga-api';
-import { MangaCard } from '@/components/manga/manga-card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
-
-const PAGE_SIZE = 20;
+import { fetchKitsuMangaCollection, type KitsuManga } from '@/lib/kitsu-api';
+import { MangaGrid } from '@/components/manga/manga-grid';
+import { Input } from '@/components/ui/input';
+import { Navbar } from '@/components/ui/navbar';
 
 export default function LibraryPage() {
-  const [mangas, setMangas] = useState<(Manga | MangaDexManga)[]>([]);
+  const [mangas, setMangas] = useState<KitsuManga[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const [isSearching, startSearch] = useTransition();
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
 
-  const loadMangas = useCallback(async (currentOffset: number, isInitialLoad = false) => {
-    if(isInitialLoad) setLoading(true);
-    else setLoadingMore(true);
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setCursorPosition({ x: e.clientX, y: e.clientY });
+    };
 
-    if (searchTerm) {
-        const { mangas: mangaDexMangas, hasMore: newHasMore } = await getMangaDexCollection(searchTerm, PAGE_SIZE, currentOffset);
-        setMangas(prev => currentOffset === 0 ? mangaDexMangas : [...prev, ...mangaDexMangas]);
-        setHasMore(newHasMore);
-    } else {
-        const { mangas: mangaDexMangas, hasMore: newHasMore } = await getMangaDexCollection(undefined, PAGE_SIZE, currentOffset);
-        if (isInitialLoad) {
-            const localMangas = await getMangas();
-            setMangas([...localMangas, ...mangaDexMangas]);
-        } else {
-            setMangas(prev => [...prev, ...mangaDexMangas]);
-        }
-        setHasMore(newHasMore);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  const loadMangas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const apiMangas = await fetchKitsuMangaCollection(searchTerm);
+      setMangas(apiMangas);
+    } catch (err) {
+      console.error('Error loading mangas:', err);
+      setMangas([]);
     }
-    
-    setOffset(currentOffset + PAGE_SIZE);
-    if(isInitialLoad) setLoading(false);
-    else setLoadingMore(false);
+    setLoading(false);
   }, [searchTerm]);
 
   useEffect(() => {
-    loadMangas(0, true);
+    loadMangas();
   }, [loadMangas]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const term = e.target.value;
-      setSearchTerm(term);
-      setOffset(0); // Reset offset for new search
-      setMangas([]); // Clear existing mangas
-      setHasMore(true); // Assume there are results
-      
-      startSearch(() => {
-          loadMangas(0, true);
-      });
+    setSearchTerm(e.target.value);
   };
 
-  const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-        loadMangas(offset);
-    }
-  };
-
-  const renderSkeletons = (count: number) => {
-    return Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="space-y-2">
-            <div className="aspect-[3/4] bg-card rounded-lg animate-pulse"></div>
-            <div className="h-6 bg-card rounded w-3/4 animate-pulse"></div>
-            <div className="h-4 bg-card rounded w-1/2 animate-pulse"></div>
-        </div>
+  const renderSkeletons = () => {
+    return Array.from({ length: 10 }).map((_, i) => (
+      <div key={i} className="space-y-2">
+        <div className="aspect-[3/4] bg-card rounded-lg animate-pulse"></div>
+        <div className="h-6 bg-card rounded w-3/4 animate-pulse"></div>
+        <div className="h-4 bg-card rounded w-1/2 animate-pulse"></div>
+      </div>
     ));
-  }
-
+  };
 
   return (
-    <main className="container mx-auto px-4 py-8">
-      <header className="text-center mb-12">
-        <h1 className="text-5xl font-headline font-bold text-primary">
-          Manga Library
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Your portal to captivating worlds.
-        </p>
-        <div className="mt-8 max-w-lg mx-auto relative">
-          <Input
-            type="search"
-            placeholder="Search for a manga..."
-            className="pl-10 h-12 text-lg"
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        </div>
-      </header>
-      {loading ? (
-         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {renderSkeletons(10)}
-         </div>
-      ) : (
-        <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {mangas.length > 0 ? (
-                mangas.map((manga) => (
-                <MangaCard key={manga.id} manga={manga} />
-                ))
-            ) : (
-                <p className="col-span-full text-center text-muted-foreground">No manga found.</p>
-            )}
-            {loadingMore && renderSkeletons(5)}
-            </div>
-            {hasMore && !loadingMore && (
-                <div className="text-center mt-12">
-                    <Button onClick={handleLoadMore} size="lg">Load More</Button>
-                </div>
-            )}
-        </>
-      )}
-    </main>
+    <div className="relative min-h-screen bg-gradient-to-b from-background via-background/95 to-background overflow-hidden">
+      {/* Cursor Gradient Effect */}
+      <motion.div
+        className="pointer-events-none fixed inset-0 z-30 opacity-50"
+        animate={{
+          background: `radial-gradient(600px at ${cursorPosition.x}px ${cursorPosition.y}px, rgba(168, 85, 247, 0.15), transparent 80%)`
+        }}
+      />
+
+      {/* Content Container */}
+      <div className="relative z-10">
+        {/* Animated Header */}
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative py-12 sm:py-16 md:py-20 overflow-hidden"
+        >
+          <div className="absolute inset-0 z-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-red-500/20 animate-gradient-x" />
+          </div>
+
+          <div className="container mx-auto px-4 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-center"
+            >
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 mb-4 px-4">
+                Manga Library
+              </h1>
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto px-6">
+                Discover your next favorite series from our vast collection of manga.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-6 sm:mt-8 max-w-lg mx-auto px-4 sm:px-0"
+            >
+              <div className="relative group">
+                <Input
+                  type="search"
+                  placeholder="Search for manga titles..."
+                  className="w-full h-10 sm:h-12 pl-10 sm:pl-12 pr-4 text-sm sm:text-base bg-background/80 backdrop-blur-sm border-2 focus:border-primary/50 transition-all duration-300 relative z-10"
+                  value={searchTerm}
+                  onChange={handleSearch}
+                />
+                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground z-20" />
+                {/* Glowing effect */}
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-lg opacity-0 group-hover:opacity-30 blur transition-all duration-300" />
+                <div className="absolute inset-0 bg-background rounded-lg z-0" />
+              </div>
+            </motion.div>
+          </div>
+        </motion.header>
+
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-6 sm:py-8 md:py-12">
+          {loading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+            >
+              {renderSkeletons()}
+            </motion.div>
+          ) : (
+            <>
+              {mangas.length > 0 ? (
+                <MangaGrid mangas={mangas} />
+              ) : (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-muted-foreground text-lg"
+                >
+                  No manga found. Try a different search term.
+                </motion.p>
+              )}
+            </>
+          )}
+        </main>
+      </div>
+    </div>
   );
 }

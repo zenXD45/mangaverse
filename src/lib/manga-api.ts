@@ -17,6 +17,10 @@ export interface Manga {
   coverImageId: string;
   coverImage?: ImagePlaceholder;
   chapters: Chapter[];
+  chapterCount?: number;
+  volumeCount?: number;
+  status?: string;
+  startDate?: string;
 }
 
 const imageMap = new Map(PlaceHolderImages.map(img => [img.id, img]));

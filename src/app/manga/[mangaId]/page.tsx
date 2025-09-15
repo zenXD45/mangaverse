@@ -2,10 +2,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getManga } from '@/lib/manga-api';
-import { getMangaDexManga, getMangaDexChapters, type MangaDexChapter } from '@/lib/mangadex-api';
+import { fetchKitsuMangaById } from '@/lib/kitsu-api';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import { ChapterList } from '@/components/manga/chapter-list';
 
 type Chapter = {
     id: string;
@@ -21,40 +21,28 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
         notFound();
     }
 
-    if (params.mangaId.startsWith('mangadex-')) {
-        const mangaPromise = getMangaDexManga(params.mangaId);
-        const chaptersPromise = getMangaDexChapters(params.mangaId.replace('mangadex-', ''));
+    const manga = await fetchKitsuMangaById(params.mangaId);
+    if (!manga) {
+        notFound();
+    }
 
-        const [manga, mangaDexChapters] = await Promise.all([mangaPromise, chaptersPromise]);
-
-        if (!manga) {
-            notFound();
-        }
-        mangaTitle = manga.title.en;
-        author = manga.author;
-        description = manga.attributes.description.en;
-        coverImageUrl = manga.coverArt.imageUrl;
-        coverImageHint = manga.coverArt.imageHint;
-        chapters = mangaDexChapters.map(ch => ({
-            id: ch.id,
-            chapterNumber: ch.attributes.chapter,
-            title: ch.attributes.title
-        }));
+    mangaTitle = manga.title;
+    description = manga.synopsis;
+    coverImageUrl = manga.posterImage.large || manga.posterImage.medium || manga.posterImage.original;
+    coverImageHint = manga.title;
+    
+    // Use fetched chapters from the API and sort them by chapter number
+    if (manga.chapters && manga.chapters.length > 0) {
+        chapters = manga.chapters
+            .sort((a, b) => a.number - b.number)
+            .map(ch => ({
+                id: ch.id,
+                chapterNumber: String(ch.number),
+                title: ch.title || `Chapter ${ch.number}`
+            }));
+        console.log(`Found ${chapters.length} chapters for ${mangaTitle}`);
     } else {
-        const manga = await getManga(params.mangaId);
-        if (!manga) {
-            notFound();
-        }
-        mangaTitle = manga.title;
-        author = manga.author;
-        description = manga.description;
-        coverImageUrl = manga.coverImage?.imageUrl;
-        coverImageHint = manga.coverImage?.imageHint;
-        chapters = manga.chapters.map(ch => ({
-            id: ch.id,
-            chapterNumber: String(ch.chapterNumber),
-            title: ch.title
-        }));
+        console.log(`No chapters found for manga: ${mangaTitle}`);
     }
 
 
@@ -91,20 +79,13 @@ export default async function MangaDetailPage({ params }: { params: { mangaId: s
             <p className="mt-6 text-foreground/80 leading-relaxed">{description}</p>
             
             <div className="mt-12">
-              <h2 className="text-2xl font-headline font-semibold mb-4 border-b border-border pb-2">Chapters</h2>
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-4">
-                {chapters && chapters.length > 0 ? chapters.map(chapter => (
-                  <Link href={`/manga/${params.mangaId}/${chapter.id}`} key={chapter.id}>
-                    <div className="flex justify-between items-center p-4 rounded-lg bg-card hover:bg-secondary transition-colors cursor-pointer">
-                      <div>
-                        <p className="font-medium text-primary-foreground">Chapter {chapter.chapterNumber}</p>
-                        {chapter.title && <p className="text-sm text-muted-foreground">{chapter.title}</p>}
-                      </div>
-                      <BookOpen className="h-5 w-5 text-accent" />
-                    </div>
-                  </Link>
-                )) : (
-                    <p className="text-muted-foreground">Chapters for this series are not yet available.</p>
+              <h2 className="text-2xl font-headline font-semibold mb-6 border-b border-border pb-2">Chapters</h2>
+              <div className="max-h-[60vh] overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-accent scrollbar-track-background">
+                {manga.chapters && (
+                  <ChapterList
+                    chapters={manga.chapters}
+                    mangaId={params.mangaId}
+                  />
                 )}
               </div>
             </div>

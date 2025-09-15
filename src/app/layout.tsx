@@ -23,7 +23,10 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        {children}
+        <div className="flex min-h-screen flex-col">
+          {/* Only show navbar on pages that aren't landing page */}
+          {children}
+        </div>
         <Toaster />
       </body>
     </html>

@@ -1,88 +1,190 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  type CarouselApi,
-} from '@/components/ui/carousel';
-import { MangaPanel } from '@/components/manga/manga-panel';
-import { MusicPlayer } from '@/components/manga/music-player';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, SlidersHorizontal } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import  {useMobile}  from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
+import { MangaPanel } from '@/components/manga/manga-panel';
+import { MusicPlayer } from '@/components/manga/music-player';
 
-
-type MangaReaderProps = {
+interface MangaReaderProps {
   panels: ImagePlaceholder[];
   mangaId: string;
   chapterTitle: string;
-};
+}
 
 export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps) {
-  const [api, setApi] = useState<CarouselApi>();
-  const [current, setCurrent] = useState(0);
-  const [count, setCount] = useState(0);
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [currentPanel, setCurrentPanel] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [preloadedImages, setPreloadedImages] = useState<Set<number>>(new Set([0]));
+  const isMobile = useMobile();
   const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
-  const hideControls = () => {
-    setControlsVisible(false);
-  };
+  // Preload next few images
+  useEffect(() => {
+    const preloadImages = async () => {
+      const imagesToPreload: number[] = [];
+      for (let i = currentPanel + 1; i < Math.min(currentPanel + 3, panels.length); i++) {
+        if (!preloadedImages.has(i)) {
+          imagesToPreload.push(i);
+        }
+      }
+      for (const index of imagesToPreload) {
+        const image = new window.Image();
+        image.src = panels[index].imageUrl;
+        try {
+          await image.decode();
+        } catch {}
+        setPreloadedImages(prev => new Set([...prev, index]));
+      }
+    };
+    if (panels.length > 1) preloadImages();
+  }, [currentPanel, panels, preloadedImages]);
 
+  const handleNext = useCallback(() => {
+    if (currentPanel < panels.length - 1) {
+      setCurrentPanel(prev => prev + 1);
+      setIsLoading(true);
+    }
+  }, [currentPanel, panels.length]);
+
+  const handlePrev = useCallback(() => {
+    if (currentPanel > 0) {
+      setCurrentPanel(prev => prev - 1);
+      setIsLoading(true);
+    }
+  }, [currentPanel]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrev();
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [handleNext, handlePrev]);
+
+  const hideControls = () => setControlsVisible(false);
   const showControls = () => {
     setControlsVisible(true);
-    if (controlsTimeout.current) {
-      clearTimeout(controlsTimeout.current);
-    }
+    if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
     controlsTimeout.current = setTimeout(hideControls, 3000);
   };
 
   useEffect(() => {
-    showControls();
+    showControls(); // Show on mount
     return () => {
-      if (controlsTimeout.current) {
-        clearTimeout(controlsTimeout.current);
-      }
+      if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
     };
   }, []);
 
-  useEffect(() => {
-    if (!api) {
-      return;
-    }
-
-    setCount(api.scrollSnapList().length);
-    setCurrent(api.selectedScrollSnap() + 1);
-
-    const onSelect = () => {
-      setCurrent(api.selectedScrollSnap() + 1);
-      showControls();
-    };
-
-    api.on('select', onSelect);
-
-    return () => {
-      api.off('select', onSelect);
-    };
-  }, [api]);
-
-  const handleSlideChange = (value: number[]) => {
-    api?.scrollTo(value[0]);
-  };
-
   return (
-    <div
-      className="relative w-full h-screen bg-black"
-      onClick={showControls}
-      onMouseMove={showControls}
-    >
+    <div className="space-y-4">
+      {/* Reader controls */}
+      <div className="flex items-center justify-between gap-4 px-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePrev}
+          disabled={currentPanel === 0}
+        >
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Previous
+        </Button>
+
+        <div className="flex-1 max-w-md">
+          <Slider
+            value={[currentPanel]}
+            min={0}
+            max={panels.length - 1}
+            step={1}
+            onValueChange={([value]) => setCurrentPanel(value)}
+            className="w-full"
+          />
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleNext}
+          disabled={currentPanel === panels.length - 1}
+        >
+          Next
+          <ChevronRight className="h-4 w-4 ml-1" />
+        </Button>
+      </div>
+
+      <Card className="relative overflow-hidden bg-black/50 rounded-lg">
+        <div
+          className="relative aspect-[3/4] md:aspect-[4/3] lg:aspect-[16/9]"
+          onClick={showControls}
+          onMouseMove={showControls}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentPanel}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={panels[currentPanel].imageUrl}
+                alt={`Page ${currentPanel + 1} of ${panels.length}`}
+                fill
+                className="object-contain"
+                onLoad={() => setIsLoading(false)}
+                quality={100}
+                priority
+                unoptimized
+              />
+            </motion.div>
+          </AnimatePresence>
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+          {/* Touch navigation overlay */}
+          {isMobile && (
+            <div className="absolute inset-0 grid grid-cols-2">
+              <button
+                onClick={handlePrev}
+                disabled={currentPanel === 0}
+                className="h-full w-full"
+                aria-label="Previous"
+              />
+              <button
+                onClick={handleNext}
+                disabled={currentPanel === panels.length - 1}
+                className="h-full w-full"
+                aria-label="Next"
+              />
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Page number */}
+      <p className="text-center text-sm text-muted-foreground">
+        Page {currentPanel + 1} of {panels.length}
+      </p>
+
+      {/* Header and Footer for manga navigation/music */}
       <header
         className={cn(
           'absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-300',
@@ -96,36 +198,11 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
             </Link>
           </Button>
           <div className="text-center">
-            <h1 className="font-headline text-lg text-primary-foreground">
-              {chapterTitle}
-            </h1>
-            <p className="text-sm text-muted-foreground">{`Page ${current} of ${count}`}</p>
+            <h1 className="font-headline text-lg text-primary-foreground">{chapterTitle}</h1>
           </div>
           <MusicPlayer />
         </div>
       </header>
-      
-      <main className="flex-grow flex items-center justify-center h-full">
-        <Carousel setApi={setApi} className="w-full h-full">
-            <CarouselContent className="h-full">
-            {panels.map((panel, index) => (
-                <CarouselItem key={panel.id} className="h-full">
-                    <MangaPanel src={panel.imageUrl} index={index} api={api} priority={index < 2} />
-                </CarouselItem>
-            ))}
-            </CarouselContent>
-            <div
-            className={cn(
-                'transition-opacity duration-300',
-                controlsVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            )}
-            >
-            <CarouselPrevious className="left-2 bg-background/50 hover:bg-background/80 border-border" />
-            <CarouselNext className="right-2 bg-background/50 hover:bg-background/80 border-border" />
-            </div>
-        </Carousel>
-      </main>
-
       <footer
         className={cn(
           'absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300',
@@ -135,10 +212,10 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
         <div className="container mx-auto flex items-center gap-4">
           <SlidersHorizontal className="text-primary-foreground" />
           <Slider
-            value={[current > 0 ? current - 1 : 0]}
-            max={count > 0 ? count - 1 : 0}
+            value={[currentPanel]}
+            max={panels.length > 0 ? panels.length - 1 : 0}
             step={1}
-            onValueChange={handleSlideChange}
+            onValueChange={([value]) => setCurrentPanel(value)}
             className="w-full"
           />
         </div>

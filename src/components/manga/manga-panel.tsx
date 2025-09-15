@@ -54,6 +54,10 @@ export function MangaPanel({ src, index, api, priority }: MangaPanelProps) {
           className="object-contain transition-transform duration-75 ease-out"
           style={{ transform: `scale(1.15) translateX(${parallaxValue}px)` }}
           data-ai-hint="manga panel"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = 'https://placehold.co/600x800?text=Image+Not+Available';
+          }}
         />
       </div>
     </div>
