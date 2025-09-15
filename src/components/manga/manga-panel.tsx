@@ -19,7 +19,6 @@ export function MangaPanel({ src, index, api, priority }: MangaPanelProps) {
 
     const scrollProgress = api.scrollProgress();
     const slideCount = api.scrollSnapList().length;
-
     const currentSlidePosition = scrollProgress * (slideCount > 1 ? slideCount - 1 : 0);
     const diff = index - currentSlidePosition;
 
@@ -42,6 +41,9 @@ export function MangaPanel({ src, index, api, priority }: MangaPanelProps) {
     };
   }, [api, onScroll]);
 
+  // Fallback image URL for broken images
+  const fallbackSrc = 'https://placehold.co/600x800?text=Image+Not+Available';
+
   return (
     <div className="h-[calc(100vh-4rem)] md:h-[calc(100vh-8rem)] w-full overflow-hidden flex items-center justify-center">
       <div className="relative w-full h-full max-w-[800px] aspect-[2/3] md:aspect-auto rounded-lg shadow-lg shadow-black/30 overflow-hidden">
@@ -53,11 +55,13 @@ export function MangaPanel({ src, index, api, priority }: MangaPanelProps) {
           sizes="(max-width: 768px) 90vw, 60vw"
           className="object-contain transition-transform duration-75 ease-out"
           style={{ transform: `scale(1.15) translateX(${parallaxValue}px)` }}
-          data-ai-hint="manga panel"
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = 'https://placehold.co/600x800?text=Image+Not+Available';
+            if (target.src !== fallbackSrc) {
+              target.src = fallbackSrc;
+            }
           }}
+          data-ai-hint="manga panel"
         />
       </div>
     </div>

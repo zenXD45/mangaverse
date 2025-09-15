@@ -4,11 +4,18 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, SlidersHorizontal } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  ArrowLeft,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import  {useMobile}  from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 import { cn } from '@/lib/utils';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { MangaPanel } from '@/components/manga/manga-panel';
@@ -24,11 +31,11 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
   const [currentPanel, setCurrentPanel] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [preloadedImages, setPreloadedImages] = useState<Set<number>>(new Set([0]));
-  const isMobile = useMobile();
+ const isMobile = useIsMobile();
   const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
 
-  // Preload next few images
+  // Preload next few images to enhance performance
   useEffect(() => {
     const preloadImages = async () => {
       const imagesToPreload: number[] = [];
@@ -37,15 +44,19 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
           imagesToPreload.push(i);
         }
       }
+
       for (const index of imagesToPreload) {
-        const image = new window.Image();
-        image.src = panels[index].imageUrl;
+        const img = new window.Image();
+        img.src = panels[index].imageUrl;
         try {
-          await image.decode();
-        } catch {}
-        setPreloadedImages(prev => new Set([...prev, index]));
+          await img.decode();
+          setPreloadedImages(prev => new Set(prev).add(index));
+        } catch {
+          // Ignore decode failure
+        }
       }
     };
+
     if (panels.length > 1) preloadImages();
   }, [currentPanel, panels, preloadedImages]);
 
@@ -63,19 +74,20 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
     }
   }, [currentPanel]);
 
-  // Keyboard navigation
+  // Keyboard navigation support
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === ' ') {
         handleNext();
       } else if (e.key === 'ArrowLeft') {
         handlePrev();
       }
     };
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNext, handlePrev]);
 
+  // Controls visibility management
   const hideControls = () => setControlsVisible(false);
   const showControls = () => {
     setControlsVisible(true);
@@ -84,7 +96,7 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
   };
 
   useEffect(() => {
-    showControls(); // Show on mount
+    showControls();
     return () => {
       if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
     };
@@ -126,6 +138,7 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
         </Button>
       </div>
 
+      {/* Manga page display */}
       <Card className="relative overflow-hidden bg-black/50 rounded-lg">
         <div
           className="relative aspect-[3/4] md:aspect-[4/3] lg:aspect-[16/9]"
@@ -153,12 +166,14 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
               />
             </motion.div>
           </AnimatePresence>
+
           {/* Loading overlay */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
+
           {/* Touch navigation overlay */}
           {isMobile && (
             <div className="absolute inset-0 grid grid-cols-2">
@@ -184,7 +199,7 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
         Page {currentPanel + 1} of {panels.length}
       </p>
 
-      {/* Header and Footer for manga navigation/music */}
+      {/* Header */}
       <header
         className={cn(
           'absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-300',
@@ -192,7 +207,12 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
         )}
       >
         <div className="container mx-auto flex items-center justify-between">
-          <Button asChild variant="ghost" size="icon" className="text-primary-foreground hover:bg-white/20">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-white/20"
+          >
             <Link href={`/manga/${mangaId}`}>
               <ArrowLeft />
             </Link>
@@ -203,6 +223,8 @@ export function MangaReader({ panels, mangaId, chapterTitle }: MangaReaderProps)
           <MusicPlayer />
         </div>
       </header>
+
+      {/* Footer */}
       <footer
         className={cn(
           'absolute bottom-0 left-0 right-0 z-10 p-4 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300',

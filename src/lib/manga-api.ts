@@ -24,7 +24,7 @@ export interface Manga {
 }
 
 const imageMap = new Map(PlaceHolderImages.map(img => [img.id, img]));
-const DEFAULT_COVER_IMAGE = PlaceHolderImages.length > 0 ? PlaceHolderImages[0] : undefined;
+const DEFAULT_COVER_IMAGE = PlaceHolderImages.length ? PlaceHolderImages[0] : undefined;
 
 export async function getMangas(): Promise<Manga[]> {
   return data.mangas.map(manga => ({
@@ -36,7 +36,6 @@ export async function getMangas(): Promise<Manga[]> {
 export async function getManga(id: string): Promise<Manga | null> {
   const mangaData = data.mangas.find(m => m.id === id);
   if (!mangaData) return null;
-
   return {
     ...mangaData,
     coverImage: imageMap.get(mangaData.coverImageId) ?? DEFAULT_COVER_IMAGE,
@@ -46,13 +45,12 @@ export async function getManga(id: string): Promise<Manga | null> {
 export async function getChapter(mangaId: string, chapterId: string): Promise<Chapter | null> {
   const mangaData = data.mangas.find(m => m.id === mangaId);
   if (!mangaData) return null;
-
   const chapterData = mangaData.chapters.find(c => c.id === chapterId);
   if (!chapterData) return null;
 
   const panels = chapterData.panelIds
     .map(id => imageMap.get(id))
-    .filter((img): img is ImagePlaceholder => !!img); // type guard to filter out falsy
+    .filter((img): img is ImagePlaceholder => !!img);
 
   return {
     ...chapterData,

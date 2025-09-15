@@ -21,10 +21,7 @@ interface MangaDexChapter {
     createdAt: string;
     pages: number;
   };
-  relationships: {
-    id: string;
-    type: string;
-  }[];
+  relationships: Relationship[];
 }
 
 interface MangaDexManga {
@@ -46,10 +43,7 @@ interface MangaDexManga {
     originalLanguage: string;
     createdAt: string;
   };
-  relationships: {
-    id: string;
-    type: string;
-  }[];
+  relationships: Relationship[];
 }
 
 interface MangaDexResponse<T> {
@@ -61,14 +55,28 @@ interface MangaDexResponse<T> {
   total: number;
 }
 
+interface Relationship {
+  id: string;
+  type: string;
+  attributes?: {
+    fileName?: string;
+    description?: string;
+    volume?: string | null;
+    [key: string]: any;
+  };
+}
+
 export async function getMangaDexManga(mangaId: string) {
   try {
     const cleanId = mangaId.replace('mangadex-', '');
-    const response = await fetch(`https://api.mangadex.org/manga/${cleanId}?includes[]=cover_art&includes[]=author`, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(
+      `https://api.mangadex.org/manga/${cleanId}?includes[]=cover_art&includes[]=author`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch manga: ${response.status}`);
@@ -80,21 +88,22 @@ export async function getMangaDexManga(mangaId: string) {
     }
 
     const manga = data.data as MangaDexManga;
-    const cover = data.data.relationships.find(rel => rel.type === 'cover_art') as MangaDexCover;
-    const coverFileName = cover?.attributes.fileName;
+    const relationships = manga.relationships as Relationship[];
 
-    const coverUrl = coverFileName
-      ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`
-      : null;
+    const cover = relationships.find((rel: Relationship) => rel.type === 'cover_art') as MangaDexCover;
+    const coverFileName = cover?.attributes?.fileName;
+
+    const coverUrl = coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : null;
 
     return {
       id: `mangadex-${manga.id}`,
-      title: manga.attributes.title.en || Object.values(manga.attributes.title)[0],
-      description: manga.attributes.description?.en || Object.values(manga.attributes.description || {})[0] || '',
+      title: manga.attributes.title.en || Object.values(manga.attributes.title || {})[0] || 'Untitled',
+      description:
+        manga.attributes.description?.en || Object.values(manga.attributes.description || {})[0] || '',
       coverArt: {
         id: cover?.id || '',
         imageUrl: coverUrl || '',
-        description: cover?.attributes.description || '',
+        description: cover?.attributes?.description || '',
       },
       attributes: {
         ...manga.attributes,
@@ -112,9 +121,10 @@ export async function getMangaDexChapters(mangaId: string) {
   try {
     const cleanId = mangaId.replace('mangadex-', '');
     const response = await fetch(
-      `https://api.mangadex.org/manga/${cleanId}/feed?translatedLanguage[]=en&order[volume]=desc&order[chapter]=desc&includes[]=scanlation_group`, {
+      `https://api.mangadex.org/manga/${cleanId}/feed?translatedLanguage[]=en&order[volume]=desc&order[chapter]=desc&includes[]=scanlation_group`,
+      {
         headers: {
-          'Accept': 'application/json',
+          Accept: 'application/json',
         },
       }
     );
@@ -145,13 +155,11 @@ export async function getMangaDexPages(chapterId: string) {
 
     const data = await response.json();
     const { baseUrl, chapter } = data;
-    
-    // Build image URLs
-    const pageUrls = chapter.data.map((filename: string) => 
-      `${baseUrl}/data/${chapter.hash}/${filename}`
-    );
 
-    // Test that we can access the first image
+    // Build image URLs
+    const pageUrls = chapter.data.map((filename: string) => `${baseUrl}/data/${chapter.hash}/${filename}`);
+
+    // Test that first image is accessible
     try {
       const testResponse = await fetch(pageUrls[0], { method: 'HEAD' });
       if (!testResponse.ok) {
@@ -174,7 +182,7 @@ export async function searchMangaDex(query?: string) {
     const params = new URLSearchParams({
       limit: '30',
       offset: '0',
-      contentRating: 'safe',
+      'contentRating[]': 'safe',
       'includes[]': 'cover_art',
       'order[relevance]': 'desc',
     });
@@ -183,9 +191,9 @@ export async function searchMangaDex(query?: string) {
       params.append('title', query);
     }
 
-    const response = await fetch(`https://api.mangadex.org/manga?${params}`, {
+    const response = await fetch(`https://api.mangadex.org/manga?${params.toString()}`, {
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
     });
 
@@ -193,30 +201,33 @@ export async function searchMangaDex(query?: string) {
       throw new Error(`Search failed: ${response.status}`);
     }
 
-    const data = await response.json() as MangaDexResponse<MangaDexManga>;
-    
+    const data = (await response.json()) as MangaDexResponse<MangaDexManga>;
+
     // Map the response to our format
-    const mangas = await Promise.all(data.data.map(async (manga) => {
-      const cover = manga.relationships.find(rel => rel.type === 'cover_art') as MangaDexCover;
-      const coverFileName = cover?.attributes.fileName;
-      
-      return {
-        id: `mangadex-${manga.id}`,
-        type: 'manga',
-        title: manga.attributes.title.en,
-        synopsis: manga.attributes.description.en,
-        posterImage: {
-          tiny: `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg`,
-          small: `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.512.jpg`,
-          medium: `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`,
-          large: `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`,
-          original: `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}`,
-        },
-        status: manga.attributes.status,
-        startDate: manga.attributes.createdAt,
-        chapterCount: manga.attributes.lastChapter ? parseInt(manga.attributes.lastChapter) : undefined,
-      };
-    }));
+    const mangas = await Promise.all(
+      data.data.map(async (manga) => {
+        const relationships = manga.relationships as Relationship[];
+        const cover = relationships.find((rel: Relationship) => rel.type === 'cover_art') as MangaDexCover;
+        const coverFileName = cover?.attributes?.fileName;
+
+        return {
+          id: `mangadex-${manga.id}`,
+          type: 'manga',
+          title: manga.attributes.title.en,
+          synopsis: manga.attributes.description.en,
+          posterImage: {
+            tiny: coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.256.jpg` : '',
+            small: coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}.512.jpg` : '',
+            medium: coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : '',
+            large: coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : '',
+            original: coverFileName ? `https://uploads.mangadex.org/covers/${manga.id}/${coverFileName}` : '',
+          },
+          status: manga.attributes.status,
+          startDate: manga.attributes.createdAt,
+          chapterCount: manga.attributes.lastChapter ? parseInt(manga.attributes.lastChapter) : undefined,
+        };
+      })
+    );
 
     return {
       mangas,

@@ -5,56 +5,55 @@ import { MangaReader } from '@/components/manga/manga-reader';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { DownloadPanelsButton } from '@/components/manga/DownloadPanelsButton';
 
-export default async function MangaReaderPage({ params }: { params: { mangaId: string, chapterId: string } }) {
-  // Validate params early to avoid Next.js warning
-  if (!params?.mangaId || !params?.chapterId) {
+type MangaReaderPageProps = {
+  params: { mangaId: string; chapterId: string };
+};
+
+export default async function MangaReaderPage({ params }: MangaReaderPageProps) {
+  // Await params for Next.js 15+
+  const { mangaId, chapterId } = await params;
+
+  if (!mangaId || !chapterId) {
     notFound();
   }
 
-  let panels: ImagePlaceholder[] = [];
-  let chapterTitle = `Chapter ${params.chapterId}`;
-  let mangaId = params.mangaId;
-
   try {
-    // Fetch manga details to get the title
-    const manga = await fetchKitsuMangaById(params.mangaId);
+    // Fetch manga details
+    const manga = await fetchKitsuMangaById(mangaId);
     if (!manga) {
-      console.error('Manga not found:', params.mangaId);
+      console.error('Manga not found:', mangaId);
       notFound();
     }
 
-    // Fetch chapter content from the manga provider
-    console.log('Fetching content for manga:', manga.id, 'chapter:', params.chapterId);
-    const chapterContent = await fetchMangaChapterContent(manga.id, params.chapterId);
-    
+    // Fetch chapter content (pages)
+    const chapterContent = await fetchMangaChapterContent(manga.id, chapterId);
     if (!chapterContent || !chapterContent.pages || chapterContent.pages.length === 0) {
-      console.warn('No panels found for chapter:', params.chapterId);
       return (
         <div className="flex flex-col items-center justify-center min-h-screen">
           <h2 className="text-2xl font-bold mb-4">No panels available for this chapter.</h2>
-          <p className="text-muted-foreground">This chapter may not have any images, or there was an error fetching them.</p>
+          <p className="text-muted-foreground">
+            This chapter may not have any images, or there was an error fetching them.
+          </p>
         </div>
       );
     }
 
-    panels = chapterContent.pages.map((imageUrl, index) => ({
-      id: `${params.chapterId}-panel-${index}`,
-      imageUrl: imageUrl,
+    // Map pages into panels for MangaReader
+    const panels: ImagePlaceholder[] = chapterContent.pages.map((imageUrl, index) => ({
+      id: `${chapterId}-panel-${index}`,
+      imageUrl,
       description: `Page ${index + 1}`,
-      imageHint: 'manga panel'
+      imageHint: 'manga panel',
     }));
-    chapterTitle = chapterContent.title;
+
+    const chapterTitle = chapterContent.title || `Chapter ${chapterId}`;
 
     return (
       <div>
         <div className="flex justify-end mb-4">
           <DownloadPanelsButton panels={panels} chapterTitle={chapterTitle} />
         </div>
-        <MangaReader 
-          panels={panels} 
-          mangaId={mangaId} 
-          chapterTitle={chapterTitle} 
-        />
+        <MangaReader panels={panels} mangaId={mangaId} chapterTitle={chapterTitle} />
       </div>
     );
   } catch (error) {
@@ -62,7 +61,9 @@ export default async function MangaReaderPage({ params }: { params: { mangaId: s
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-2xl font-bold mb-4">Error loading chapter</h2>
-        <p className="text-muted-foreground">There was an error loading the manga content. Please try again later.</p>
+        <p className="text-muted-foreground">
+          There was an error loading the manga content. Please try again later.
+        </p>
       </div>
     );
   }
