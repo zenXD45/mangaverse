@@ -1,4 +1,3 @@
-import { load } from 'cheerio';
 import { getMangaDexPages } from './mangadex';
 
 export interface MangaChapterContent {
@@ -33,12 +32,11 @@ interface MangaDexAtHomeData {
   };
 }
 
+// Search for manga and get chapter feed URL
 async function searchManga(title: string) {
   try {
-    // Using MangaDex API for better search results
     const searchUrl = `https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=1&contentRating[]=safe&contentRating[]=suggestive&includes[]=cover_art`;
     const searchRes = await fetch(searchUrl);
-    
     if (!searchRes.ok) {
       console.error('Search failed:', searchRes.status, searchRes.statusText);
       return null;
@@ -48,11 +46,9 @@ async function searchManga(title: string) {
     if (data.data && data.data.length > 0) {
       const mangaId = data.data[0].id;
       // Get chapter list
-      const chaptersUrl = `https://api.mangadex.org/manga/${mangaId}/feed?translatedLanguage[]=en&order[chapter]=asc`;
-      console.log('Found manga, fetching chapters from:', chaptersUrl);
-      return chaptersUrl;
+      return `https://api.mangadex.org/manga/${mangaId}/feed?translatedLanguage[]=en&order[chapter]=asc`;
     }
-    
+
     console.error('No manga found for title:', title);
     return null;
   } catch (error) {
@@ -61,10 +57,10 @@ async function searchManga(title: string) {
   }
 }
 
+// Find chapter ID by number from a feed URL
 async function getChapterLink(chaptersUrl: string, targetChapterNumber: string) {
   try {
     const chaptersRes = await fetch(chaptersUrl);
-    
     if (!chaptersRes.ok) {
       console.error('Chapters fetch failed:', chaptersRes.status, chaptersRes.statusText);
       return null;
@@ -76,16 +72,12 @@ async function getChapterLink(chaptersUrl: string, targetChapterNumber: string) 
       return null;
     }
 
-    // Find the chapter that matches our target number
-    const chapter = (data as MangaDexChapterResponse).data.find((ch: MangaDexChapter) => 
-      ch.attributes.chapter === targetChapterNumber || 
-      String(ch.attributes.chapter) === targetChapterNumber
+    const chapter = (data as MangaDexChapterResponse).data.find((ch: MangaDexChapter) =>
+      ch.attributes.chapter === targetChapterNumber || String(ch.attributes.chapter) === targetChapterNumber
     );
 
     if (chapter) {
-      const chapterId = chapter.id;
-      console.log('Found chapter:', chapterId);
-      return chapterId;
+      return chapter.id;
     }
 
     console.error('Chapter not found:', targetChapterNumber);
@@ -96,57 +88,50 @@ async function getChapterLink(chaptersUrl: string, targetChapterNumber: string) 
   }
 }
 
+// Fetch MangaDex chapter images by chapter ID
+async function getChapterPages(chapterId: string): Promise<string[] | null> {
+  try {
+    const atHomeUrl = `https://api.mangadex.org/at-home/server/${chapterId}`;
+    const atHomeRes = await fetch(atHomeUrl);
+
+    if (!atHomeRes.ok) {
+      throw new Error(`Failed to get chapter images: ${atHomeRes.status}`);
+    }
+
+    const atHomeData: MangaDexAtHomeData = await atHomeRes.json();
+    const baseUrl = atHomeData.baseUrl;
+    const hash = atHomeData.chapter.hash;
+    const pages = atHomeData.chapter.data.map((filename: string) =>
+      `${baseUrl}/data/${hash}/${filename}`
+    );
+
+    return pages.length > 0 ? pages : null;
+  } catch (error) {
+    console.error('Error fetching chapter pages:', error);
+    return null;
+  }
+}
+
+// Main exported function
 export async function fetchMangaChapterContent(mangaTitle: string, chapterNumber: string): Promise<MangaChapterContent | null> {
   try {
     console.log('Fetching manga content for:', mangaTitle, 'chapter:', chapterNumber);
-    
-    // First try direct MangaDex API if we have a MangaDex ID
-    if (mangaTitle.startsWith('mangadex-')) {
-      console.log('Fetching MangaDex chapter pages for chapter:', chapterNumber);
-      const pages = await getMangaDexPages(chapterNumber);
-      
+
+    // If input is a direct MangaDex chapter ID (UUID format)
+    if (/^[0-9a-f-]{36}$/.test(chapterNumber)) {
+      const pages = await getChapterPages(chapterNumber);
       if (pages && pages.length > 0) {
         return {
           id: chapterNumber,
           title: `Chapter ${chapterNumber}`,
-          pages: pages
+          pages
         };
+      } else {
+        throw new Error('No images found for this chapter');
       }
-
-      const chapterData = await chapterSearchRes.json();
-      if (!chapterData.data || !Array.isArray(chapterData.data)) {
-        throw new Error('Invalid chapter data format');
-      }
-
-      const chapter = chapterData.data.find((ch: MangaDexChapter) => String(ch.attributes.chapter) === chapterNumber);
-      if (!chapter) {
-        throw new Error(`Chapter ${chapterNumber} not found`);
-      }
-
-      // Get chapter images
-      const atHomeUrl = `https://api.mangadex.org/at-home/server/${chapter.id}`;
-      console.log('Getting chapter pages from:', atHomeUrl);
-      
-      const atHomeRes = await fetch(atHomeUrl);
-      if (!atHomeRes.ok) {
-        throw new Error(`Failed to get chapter images: ${atHomeRes.status}`);
-      }
-
-      const atHomeData = await atHomeRes.json();
-      const baseUrl = atHomeData.baseUrl;
-      const hash = atHomeData.chapter.hash;
-      const pages = atHomeData.chapter.data.map((filename: string) => 
-        `${baseUrl}/data/${hash}/${filename}`
-      );
-
-      return {
-        id: chapterNumber,
-        title: chapter.attributes.title || `Chapter ${chapterNumber}`,
-        pages
-      };
     }
-    
-    // Fallback to search if no direct ID
+
+    // If input is a title, search MangaDex for chapters
     const chaptersUrl = await searchManga(mangaTitle);
     if (!chaptersUrl) {
       throw new Error('Could not find manga: ' + mangaTitle);
@@ -157,31 +142,16 @@ export async function fetchMangaChapterContent(mangaTitle: string, chapterNumber
       throw new Error('Could not find chapter: ' + chapterNumber);
     }
 
-    const atHomeUrl = `https://api.mangadex.org/at-home/server/${chapterId}`;
-    const atHomeRes = await fetch(atHomeUrl);
-    
-    if (!atHomeRes.ok) {
-      throw new Error(`At-home server failed: ${atHomeRes.status}`);
+    const pages = await getChapterPages(chapterId);
+    if (!pages || pages.length === 0) {
+      throw new Error('No images found for chapter');
     }
 
-    const atHomeData = await atHomeRes.json();
-    const baseUrl = atHomeData.baseUrl;
-    const hash = atHomeData.chapter.hash;
-    const pages = atHomeData.chapter.data.map((filename: string) => 
-      `${baseUrl}/data/${hash}/${filename}`
-    );
-
-    if (pages.length === 0) {
-      throw new Error('No images found in chapter');
-    }
-
-    console.log('Successfully fetched', pages.length, 'pages');
     return {
-      id: chapterNumber,
+      id: chapterId,
       title: `Chapter ${chapterNumber}`,
       pages
     };
-
   } catch (error) {
     console.error('Error fetching manga content:', error);
     return null;
